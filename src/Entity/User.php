@@ -5,6 +5,8 @@ namespace App\Entity;
 use ApiPlatform\Metadata\ApiResource;
 use App\Repository\UserRepository;
 use App\State\UserPasswordHasher;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -73,6 +75,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Assert\NotBlank(groups: ['user:create'])]
     #[Assert\Length(min: 8)]
     private ?string $plainPassword = null;
+
+    /**
+     * @var Collection<int, Project>
+     */
+    #[ORM\OneToMany(targetEntity: Project::class, mappedBy: 'owner')]
+    private Collection $ownedProjects;
+
+    /**
+     * @var Collection<int, Project>
+     */
+    #[ORM\ManyToMany(targetEntity: Project::class, mappedBy: 'members')]
+    private Collection $projects;
+
+    public function __construct()
+    {
+        $this->ownedProjects = new ArrayCollection();
+        $this->projects = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -175,6 +195,63 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setFullName(string $fullName): static
     {
         $this->fullName = $fullName;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Project>
+     */
+    public function getOwnedProjects(): Collection
+    {
+        return $this->ownedProjects;
+    }
+
+    public function addOwnedProject(Project $ownedProject): static
+    {
+        if (!$this->ownedProjects->contains($ownedProject)) {
+            $this->ownedProjects->add($ownedProject);
+            $ownedProject->setOwner($this);
+        }
+
+        return $this;
+    }
+
+    public function removeOwnedProject(Project $ownedProject): static
+    {
+        if ($this->ownedProjects->removeElement($ownedProject)) {
+            // set the owning side to null (unless already changed)
+            if ($ownedProject->getOwner() === $this) {
+                $ownedProject->setOwner(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Project>
+     */
+    public function getProjects(): Collection
+    {
+        return $this->projects;
+    }
+
+    public function addProject(Project $project): static
+    {
+        if (!$this->projects->contains($project)) {
+            $this->projects->add($project);
+            $project->addMember($this);
+        }
+
+        return $this;
+    }
+
+    public function removeProject(Project $project): static
+    {
+        if ($this->projects->removeElement($project)) {
+            $project->removeMember($this);
+        }
 
         return $this;
     }
