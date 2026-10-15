@@ -6,6 +6,8 @@ use ApiPlatform\Metadata\ApiResource;
 use App\Enum\TicketPriority;
 use App\Enum\TicketStatus;
 use App\Repository\TicketRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
@@ -67,10 +69,17 @@ class Ticket
     #[Groups(['ticket:read', 'ticket:write'])]
     private ?User $assignee = null;
 
+    /**
+     * @var Collection<int, Comment>
+     */
+    #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: 'ticket', orphanRemoval: true)]
+    private Collection $comments;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = $this->createdAt;
+        $this->comments = new ArrayCollection();
     }
 
     #[ORM\PreUpdate]
@@ -174,6 +183,36 @@ class Ticket
     public function setAssignee(?User $assignee): static
     {
         $this->assignee = $assignee;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Comment>
+     */
+    public function getComments(): Collection
+    {
+        return $this->comments;
+    }
+
+    public function addComment(Comment $comment): static
+    {
+        if (!$this->comments->contains($comment)) {
+            $this->comments->add($comment);
+            $comment->setTicket($this);
+        }
+
+        return $this;
+    }
+
+    public function removeComment(Comment $comment): static
+    {
+        if ($this->comments->removeElement($comment)) {
+            // set the owning side to null (unless already changed)
+            if ($comment->getTicket() === $this) {
+                $comment->setTicket(null);
+            }
+        }
 
         return $this;
     }
