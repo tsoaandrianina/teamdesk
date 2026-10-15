@@ -53,10 +53,17 @@ class Project
     #[Groups(['project:read', 'project:write'])]
     private Collection $members;
 
+    /**
+     * @var Collection<int, Ticket>
+     */
+    #[ORM\OneToMany(targetEntity: Ticket::class, mappedBy: 'project', orphanRemoval: true)]
+    private Collection $tickets;
+
     public function __construct()
     {
         $this->members = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
+        $this->tickets = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -132,6 +139,36 @@ class Project
     public function removeMember(User $member): static
     {
         $this->members->removeElement($member);
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Ticket>
+     */
+    public function getTickets(): Collection
+    {
+        return $this->tickets;
+    }
+
+    public function addTicket(Ticket $ticket): static
+    {
+        if (!$this->tickets->contains($ticket)) {
+            $this->tickets->add($ticket);
+            $ticket->setProject($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTicket(Ticket $ticket): static
+    {
+        if ($this->tickets->removeElement($ticket)) {
+            // set the owning side to null (unless already changed)
+            if ($ticket->getProject() === $this) {
+                $ticket->setProject(null);
+            }
+        }
 
         return $this;
     }
