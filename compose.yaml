@@ -3,6 +3,7 @@ services:
     build: .
     volumes:
       - .:/var/www/html
+      - php_var:/var/www/html/var
     environment:
       DATABASE_URL: "postgresql://app:${POSTGRES_PASSWORD:-app}@database:5432/teamdesk?serverVersion=16&charset=utf8"
     depends_on:
@@ -37,3 +38,4 @@ services:
 
 volumes:
   database_data:
+  php_var:
